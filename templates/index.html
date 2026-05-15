@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Career Advisor</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to right, #e0eafc, #cfdef3);
+            padding: 40px 15px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        h1, h2, h3 {
+            color: #004085;
+            margin-bottom: 10px;
+        }
+
+        input[type="file"], select, input[type="submit"] {
+            font-size: 16px;
+            padding: 8px;
+            margin-top: 10px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+
+        input[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 180px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            white-space: pre-wrap;
+        }
+
+        .warning, .error, .score-box {
+            padding: 12px 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .warning {
+            background: #fffbe6;
+            border-left: 6px solid #ffc107;
+            color: #856404;
+        }
+
+        .error {
+            background: #f8d7da;
+            border-left: 6px solid #dc3545;
+            color: #721c24;
+        }
+
+        .score-box {
+            background: #e2f0d9;
+            border-left: 6px solid #28a745;
+        }
+
+        .progress-bar {
+            background-color: #ccc;
+            width: 100%;
+            height: 15px;
+            border-radius: 10px;
+            margin-top: 8px;
+        }
+
+        .progress {
+            height: 15px;
+            border-radius: 10px;
+            background-color: #28a745;
+        }
+
+        ul {
+            list-style-type: square;
+            padding-left: 20px;
+        }
+
+        .btn-download {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-download:hover {
+            background-color: #1e7e34;
+        }
+
+        .footer {
+            margin-top: 40px;
+            font-size: 13px;
+            text-align: center;
+            color: #555;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>AI Career Advisor</h1>
+    <form method="post" enctype="multipart/form-data">
+        <label>Upload Your Resume (PDF)</label>
+        <input type="file" name="resume" required>
+        <input type="submit" value="Analyze">
+    </form>
+
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+
+    {% if warning %}
+        <div class="warning">{{ warning }}</div>
+    {% endif %}
+
+    {% if job_role %}
+        <h2>Predicted Role: {{ job_role }}</h2>
+
+        <form method="post">
+            <label for="manual_role">Or select a different role:</label>
+            <select name="manual_role" id="manual_role" onchange="this.form.submit()">
+                <option value="">--Choose a role--</option>
+                {% for role in all_roles %}
+                    <option value="{{ role }}" {% if role == job_role %}selected{% endif %}>{{ role }}</option>
+                {% endfor %}
+            </select>
+        </form>
+
+        {% if resume_score is not none %}
+            <div class="score-box">
+                <strong>Resume Match Score:</strong> {{ resume_score }}%
+                <div class="progress-bar">
+                    <div class="progress" style="width: {{ resume_score }}%"></div>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if skill_gap %}
+            <h3>Missing Skills for this Role:</h3>
+            <ul>
+                {% for skill in skill_gap %}
+                    <li>{{ skill }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p><strong>No skill gaps detected!</strong> ✅</p>
+        {% endif %}
+
+        {% if resume_score is not none and resume_score >= 30 %}
+            {% if cover_letter %}
+                <h3>Generated Cover Letter:</h3>
+                <textarea readonly>{{ cover_letter }}</textarea>
+                <a href="{{ url_for('download_pdf', cover_letter=cover_letter|urlencode) }}" class="btn-download">
+                    Download Cover Letter as PDF
+                </a>
+            {% endif %}
+
+            {% if interview_qa %}
+                <h3>Interview Q&A</h3>
+                <textarea readonly>{{ interview_qa }}</textarea>
+            {% endif %}
+        {% else %}
+            <p class="warning">⚠️ Your resume has very few matching skills for this role. Consider updating it for better results.</p>
+        {% endif %}
+
+        {% if career_suggestions %}
+            <h3>Career Path Suggestions</h3>
+            <textarea readonly>{{ career_suggestions }}</textarea>
+        {% endif %}
+    {% endif %}
+</div>
+
+<div class="footer">
+    &copy; 2025 AI Career Advisor | Built with ❤️ using Flask & Gemini API
+</div>
+</body>
+</html>
