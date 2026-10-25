@@ -1,0 +1,123 @@
+[1mdiff --git a/app.py b/app.py[m
+[1mindex a53bbee..cc03167 100644[m
+[1m--- a/app.py[m
+[1m+++ b/app.py[m
+[36m@@ -1,189 +1,215 @@[m
+ from dotenv import load_dotenv[m
+[32m+[m[32mimport logging[m
+ import os[m
+[31m-from flask import Flask, render_template, request, session, send_file[m
+[31m-import fitz  # PyMuPDF[m
+ import pickle[m
+[31m-from groq import Groq[m
+ import re[m
+[31m-import logging[m
+ from io import BytesIO[m
+[32m+[m
+[32m+[m[32mimport fitz  # PyMuPDF[m
+[32m+[m[32mfrom flask import Flask, render_template, request, session, send_file[m
+ from fpdf import FPDF[m
+[32m+[m[32mfrom groq import Groq[m
+[32m+[m
+[32m+[m[32m# Load environment variables from .env[m
+[32m+[m[32mload_dotenv()[m
+ [m
+[31m-app = Flask(__name__)[m
+[31m-app.secret_key = "your-super-secret-key"[m
+ logging.basicConfig(level=logging.INFO)[m
+ [m
+[31m-# Load model and vectorizer[m
+[31m-with open('resume_classifier.pkl', 'rb') as f:[m
+[31m-    classifier = pickle.load(f)[m
+[32m+[m[32mapp = Flask(__name__)[m
+ [m
+[31m-with open('vectorizer.pkl', 'rb') as f:[m
+[31m-    vectorizer = pickle.load(f)[m
+[32m+[m[32m# Use a persistent secret key from .env so sessions remain valid across restarts.[m
+[32m+[m[32mapp.secret_key = os.getenv("FLASK_SECRET_KEY")[m
+[32m+[m[32mif not app.secret_key:[m
+[32m+[m[32m    raise RuntimeError([m
+[32m+[m[32m        "FLASK_SECRET_KEY is missing. Generate a secret key and add it to your .env file."[m
+[32m+[m[32m    )[m
+ [m
+[31m-load_dotenv()[m
+[32m+[m[32m# Load the trained resume classification model and vectorizer.[m
+[32m+[m[32mwith open("resume_classifier.pkl", "rb") as model_file:[m
+[32m+[m[32m    classifier = pickle.load(model_file)[m
+[32m+[m
+[32m+[m[32mwith open("vectorizer.pkl", "rb") as vectorizer_file:[m
+[32m+[m[32m    vectorizer = pickle.load(vectorizer_file)[m
+[32m+[m
+[32m+[m[32m# Groq API configuration.[m
+[32m+[m[32mgroq_api_key = os.getenv("GROQ_API_KEY")[m
+[32m+[m[32mif not groq_api_key:[m
+[32m+[m[32m    raise RuntimeError("GROQ_API_KEY is missing. Add it to your .env file.")[m
+[32m+[m
+[32m+[m[32mclient = Groq(api_key=groq_api_key)[m
+[32m+[m[32mMODEL_NAME = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")[m
+ [m
+[31m-# Groq setup[m
+[31m-client = Groq([m
+[31m-    api_key=os.getenv("GROQ_API_KEY")[m
+[31m-)[m
+ [m
+ required_skills_by_role = {[m
+[31m-    'AI Engineer': ['Python', 'TensorFlow', 'PyTorch', 'Deep Learning', 'ML'],[m
+[31m-    'Data Scientist': ['Python', 'Machine Learning', 'Statistics', 'Pandas', 'SQL', 'Scikit-learn', 'TensorFlow'],[m
+[31m-    'Web Developer': ['HTML', 'CSS', 'JavaScript', 'React', 'Node.js'],[m
+[31m-    'Designer': ['Figma', 'Adobe XD', 'UI/UX', 'Sketch', 'Visual Design'],[m
+[31m-    'Full Stack Developer': ['HTML', 'CSS', 'JavaScript', 'React', 'Node.js', 'Express', 'MongoDB'],[m
+[31m-    'Backend Developer': ['Node.js', 'Express', 'MongoDB', 'SQL', 'APIs'],[m
+[31m-    'Frontend Developer': ['HTML', 'CSS', 'JavaScript', 'React', 'UI/UX'],[m
+[31m-    'DevOps Engineer': ['Docker', 'Kubernetes', 'CI/CD', 'AWS', 'Terraform'],[m
+[31m-    'Mobile App Developer': ['Flutter', 'React Native', 'Java', 'Kotlin', 'Swift'],[m
+[31m-    'Cloud Engineer': ['AWS', 'Azure', 'GCP', 'Terraform', 'Linux'],[m
+[31m-    'ML Engineer': ['Python', 'Scikit-learn', 'Deep Learning', 'TensorFlow', 'MLOps'],[m
+[31m-    'Database Admin': ['SQL', 'MySQL', 'PostgreSQL', 'MongoDB', 'Database Design'],[m
+[31m-    'Graphic Designer': ['Adobe Photoshop', 'Illustrator', 'InDesign', 'Sketch', 'Figma', 'Typography', 'Branding', 'UI/UX', 'Video Editing'],[m
+[31m-    'Musician': ['Music Theory', 'Composition', 'Sibelius', 'Ableton', 'Instrumental Skills', 'Recording', 'Sound Editing'],[m
+[31m-    'Dancer': ['Choreography', 'Stage Performance', 'Classical Dance', 'Hip-hop', 'Contemporary', 'Flexibility', 'Rhythm'],[m
+[31m-    'Actor': ['Stage Presence', 'Improvisation', 'Dialogue Delivery', 'Script Reading', 'Voice Modulation', 'Screen Acting'],[m
+[31m-    'Teacher': ['Classroom Management', 'Lesson Planning', 'Curriculum Design', 'Educational Tools', 'Assessment', 'Communication'],[m
+[31m-    'Business Analyst': ['Business Analysis', 'Stakeholder Communication', 'Requirement Gathering', 'SQL', 'Excel', 'UML'],[m
+[31m-    'Digital Marketer': ['SEO', 'Google Analytics', 'Social Media Marketing', 'Email Marketing', 'AdWords', 'Content Strategy'],[m
+[31m-    'Mechanical Engineer': ['CAD', 'SolidWorks', 'Thermodynamics', 'MATLAB', 'Mechanical Design'],[m
+[31m-    'Civil Engineer': ['AutoCAD', 'Structural Analysis', 'Construction Management', 'Site Supervision'],[m
+[31m-    'Doctor': ['Diagnosis', 'Patient Care', 'Medical Knowledge', 'Clinical Procedures', 'EMR Systems'],[m
+[31m-    'Nurse': ['Patient Monitoring', 'Medication Administration', 'Emergency Care', 'Medical Records', 'Compassionate Care'][m
+[32m+[m[32m    "AI Engineer": ["Python", "TensorFlow", "PyTorch", "Deep Learning", "ML"],[m
+[32m+[m[32m    "Data Scientist": ["Python", "Machine Learning", "Statistics", "Pandas", "SQL", "Scikit-learn", "TensorFlow"],[m
+[32m+[m[32m    "Web Developer": ["HTML", "CSS", "JavaScript", "React", "Node.js"],[m
+[32m+[m[32m    "Designer": ["Figma", "Adobe XD", "UI/UX", "Sketch", "Visual Design"],[m
+[32m+[m[32m    "Full Stack Developer": ["HTML", "CSS", "JavaScript", "React", "Node.js", "Express", "MongoDB"],[m
+[32m+[m[32m    "Backend Developer": ["Node.js", "Express", "MongoDB", "SQL", "APIs"],[m
+[32m+[m[32m    "Frontend Developer": ["HTML", "CSS", "JavaScript", "React", "UI/UX"],[m
+[32m+[m[32m    "DevOps Engineer": ["Docker", "Kubernetes", "CI/CD", "AWS", "Terraform"],[m
+[32m+[m[32m    "Mobile App Developer": ["Flutter", "React Native", "Java", "Kotlin", "Swift"],[m
+[32m+[m[32m    "Cloud Engineer": ["AWS", "Azure", "GCP", "Terraform", "Linux"],[m
+[32m+[m[32m    "ML Engineer": ["Python", "Scikit-learn", "Deep Learning", "TensorFlow", "MLOps"],[m
+[32m+[m[32m    "Database Admin": ["SQL", "MySQL", "PostgreSQL", "MongoDB", "Database Design"],[m
+[32m+[m[32m    "Graphic Designer": ["Adobe Photoshop", "Illustrator", "InDesign", "Sketch", "Figma", "Typography", "Branding", "UI/UX", "Video Editing"],[m
+[32m+[m[32m    "Musician": ["Music Theory", "Composition", "Sibelius", "Ableton", "Instrumental Skills", "Recording", "Sound Editing"],[m
+[32m+[m[32m    "Dancer": ["Choreography", "Stage Performance", "Classical Dance", "Hip-hop", "Contemporary", "Flexibility", "Rhythm"],[m
+[32m+[m[32m    "Actor": ["Stage Presence", "Improvisation", "Dialogue Delivery", "Script Reading", "Voice Modulation", "Screen Acting"],[m
+[32m+[m[32m    "Teacher": ["Classroom Management", "Lesson Planning", "Curriculum Design", "Educational Tools", "Assessment", "Communication"],[m
+[32m+[m[32m    "Business Analyst": ["Business Analysis", "Stakeholder Communication", "Requirement Gathering", "SQL", "Excel", "UML"],[m
+[32m+[m[32m    "Digital Marketer": ["SEO", "Google Analytics", "Social Media Marketing", "Email Marketing", "AdWords", "Content Strategy"],[m
+[32m+[m[32m    "Mechanical Engineer": ["CAD", "SolidWorks", "Thermodynamics", "MATLAB", "Mechanical Design"],[m
+[32m+[m[32m    "Civil Engineer": ["AutoCAD", "Structural Analysis", "Construction Management", "Site Supervision"],[m
+[32m+[m[32m    "Doctor": ["Diagnosis", "Patient Care", "Medical Knowledge", "Clinical Procedures", "EMR Systems"],[m
+[32m+[m[32m    "Nurse": ["Patient Monitoring", "Medication Administration", "Emergency Care", "Medical Records", "Compassionate Care"],[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mnormalized_skill_map = {[m
+[32m+[m[32m    role.lower(): skills[m
+[32m+[m[32m    for role, skills in required_skills_by_role.items()[m
+ }[m
+ [m
+[31m-normalized_skill_map = {k.lower(): v for k, v in required_skills_by_role.items()}[m
+[31m-role_mapping = {k.lower(): k for k in required_skills_by_role}[m
+[32m+[m[32mrole_mapping = {[m
+[32m+[m[32m    role.lower(): role[m
+[32m+[m[32m    for role in required_skills_by_role[m
+[32m+

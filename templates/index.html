@@ -1,14 +1,22 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Career Advisor</title>
+
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(to right, #e0eafc, #cfdef3);
             padding: 40px 15px;
             color: #333;
+            margin: 0;
         }
 
         .container {
@@ -26,9 +34,14 @@
             margin-bottom: 10px;
         }
 
+        h1 {
+            margin-top: 0;
+        }
+
         input[type="file"], select, input[type="submit"] {
+            display: block;
             font-size: 16px;
-            padding: 8px;
+            padding: 10px;
             margin-top: 10px;
             width: 100%;
             max-width: 400px;
@@ -45,19 +58,6 @@
 
         input[type="submit"]:hover {
             background-color: #0056b3;
-        }
-
-        textarea {
-            width: 100%;
-            min-height: 180px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 14px;
-            margin-top: 10px;
-            padding: 10px;
-            background: #f9f9f9;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            white-space: pre-wrap;
         }
 
         .warning, .error, .score-box {
@@ -90,17 +90,113 @@
             height: 15px;
             border-radius: 10px;
             margin-top: 8px;
+            overflow: hidden;
         }
 
         .progress {
-            height: 15px;
+            height: 100%;
             border-radius: 10px;
             background-color: #28a745;
+            transition: width 0.4s ease;
         }
 
         ul {
             list-style-type: square;
-            padding-left: 20px;
+            padding-left: 22px;
+        }
+
+        /* Formatted AI output boxes */
+        .output-box {
+            width: 100%;
+            margin-top: 10px;
+            padding: 20px;
+            background: #f8fbff;
+            border: 1px solid #cbdcf0;
+            border-radius: 10px;
+            line-height: 1.7;
+            overflow-wrap: anywhere;
+            color: #333;
+        }
+
+        .output-box > :first-child {
+            margin-top: 0;
+        }
+
+        .output-box > :last-child {
+            margin-bottom: 0;
+        }
+
+        .output-box h1,
+        .output-box h2,
+        .output-box h3,
+        .output-box h4 {
+            color: #004085;
+            line-height: 1.35;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .output-box h1 { font-size: 1.5rem; }
+        .output-box h2 { font-size: 1.3rem; }
+        .output-box h3 { font-size: 1.12rem; }
+        .output-box h4 { font-size: 1rem; }
+
+        .output-box p {
+            margin: 10px 0;
+        }
+
+        .output-box ul,
+        .output-box ol {
+            padding-left: 25px;
+            margin: 10px 0 16px;
+        }
+
+        .output-box li {
+            margin-bottom: 7px;
+        }
+
+        .output-box table {
+            display: block;
+            max-width: 100%;
+            overflow-x: auto;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .output-box th,
+        .output-box td {
+            border: 1px solid #d5dfeb;
+            padding: 10px;
+            text-align: left;
+            vertical-align: top;
+            min-width: 120px;
+        }
+
+        .output-box th {
+            background: #e0eafc;
+            color: #004085;
+        }
+
+        .output-box tr:nth-child(even) td {
+            background: #f4f8fd;
+        }
+
+        .output-box strong {
+            color: #004085;
+        }
+
+        .output-box blockquote {
+            margin: 12px 0;
+            padding: 8px 15px;
+            border-left: 4px solid #9bbce4;
+            background: #eef5ff;
+        }
+
+        .output-box code {
+            padding: 2px 5px;
+            background: #edf0f5;
+            border-radius: 4px;
+            font-family: Consolas, monospace;
         }
 
         .btn-download {
@@ -126,17 +222,41 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px 16px;
+            }
+
+            .output-box {
+                padding: 14px;
+            }
         }
     </style>
 </head>
+
 <body>
 <div class="container">
     <h1>AI Career Advisor</h1>
+
     <form method="post" enctype="multipart/form-data">
-        <label>Upload Your Resume (PDF)</label>
-        <input type="file" name="resume" required>
+        <label for="resume">Upload Your Resume (PDF)</label>
+        <input
+            type="file"
+            id="resume"
+            name="resume"
+            accept=".pdf,application/pdf"
+            required
+        >
         <input type="submit" value="Analyze">
     </form>
 
@@ -153,10 +273,19 @@
 
         <form method="post">
             <label for="manual_role">Or select a different role:</label>
-            <select name="manual_role" id="manual_role" onchange="this.form.submit()">
+            <select
+                name="manual_role"
+                id="manual_role"
+                onchange="this.form.submit()"
+            >
                 <option value="">--Choose a role--</option>
                 {% for role in all_roles %}
-                    <option value="{{ role }}" {% if role == job_role %}selected{% endif %}>{{ role }}</option>
+                    <option
+                        value="{{ role }}"
+                        {% if role == job_role %}selected{% endif %}
+                    >
+                        {{ role }}
+                    </option>
                 {% endfor %}
             </select>
         </form>
@@ -164,8 +293,19 @@
         {% if resume_score is not none %}
             <div class="score-box">
                 <strong>Resume Match Score:</strong> {{ resume_score }}%
-                <div class="progress-bar">
-                    <div class="progress" style="width: {{ resume_score }}%"></div>
+
+                <div
+                    class="progress-bar"
+                    role="progressbar"
+                    aria-valuenow="{{ resume_score }}"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-label="Resume match score"
+                >
+                    <div
+                        class="progress"
+                        style="width: {{ [[resume_score, 0]|max, 100]|min }}%"
+                    ></div>
                 </div>
             </div>
         {% endif %}
@@ -184,29 +324,78 @@
         {% if resume_score is not none and resume_score >= 30 %}
             {% if cover_letter %}
                 <h3>Generated Cover Letter:</h3>
-                <textarea readonly>{{ cover_letter }}</textarea>
-                <a href="{{ url_for('download_pdf', cover_letter=cover_letter|urlencode) }}" class="btn-download">
+
+                <div class="output-box" id="cover-letter-output"></div>
+
+                <script type="text/plain" id="cover-letter-markdown">{{ cover_letter }}</script>
+
+                <a
+                    href="{{ url_for('download_pdf', cover_letter=cover_letter|urlencode) }}"
+                    class="btn-download"
+                >
                     Download Cover Letter as PDF
                 </a>
             {% endif %}
 
             {% if interview_qa %}
-                <h3>Interview Q&A</h3>
-                <textarea readonly>{{ interview_qa }}</textarea>
+                <h3>Interview Q&amp;A</h3>
+
+                <div class="output-box" id="interview-output"></div>
+
+                <script type="text/plain" id="interview-markdown">{{ interview_qa }}</script>
             {% endif %}
         {% else %}
-            <p class="warning">⚠️ Your resume has very few matching skills for this role. Consider updating it for better results.</p>
+            <p class="warning">
+                ⚠️ Your resume has very few matching skills for this role.
+                Consider updating it for better results.
+            </p>
         {% endif %}
 
         {% if career_suggestions %}
             <h3>Career Path Suggestions</h3>
-            <textarea readonly>{{ career_suggestions }}</textarea>
+
+            <div class="output-box" id="career-output"></div>
+
+            <script type="text/plain" id="career-markdown">{{ career_suggestions }}</script>
         {% endif %}
     {% endif %}
 </div>
 
 <div class="footer">
-    &copy; 2025 AI Career Advisor | Built with ❤️ using Flask & Gemini API
+    &copy; 2026 AI Career Advisor | Built with Flask &amp; Groq API
 </div>
+
+<!-- Markdown renderer and HTML sanitizer -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+
+<script>
+    function renderMarkdown(sourceId, outputId) {
+        const source = document.getElementById(sourceId);
+        const output = document.getElementById(outputId);
+
+        if (!source || !output) {
+            return;
+        }
+
+        const markdown = source.textContent.trim();
+
+        if (window.marked && window.DOMPurify) {
+            const renderedHtml = marked.parse(markdown, {
+                gfm: true,
+                breaks: true
+            });
+
+            output.innerHTML = DOMPurify.sanitize(renderedHtml);
+        } else {
+            // Fallback: show the original content safely as plain text.
+            output.textContent = markdown;
+        }
+    }
+
+    renderMarkdown("cover-letter-markdown", "cover-letter-output");
+    renderMarkdown("interview-markdown", "interview-output");
+    renderMarkdown("career-markdown", "career-output");
+</script>
 </body>
 </html>
