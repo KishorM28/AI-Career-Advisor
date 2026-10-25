@@ -10,7 +10,7 @@ from io import BytesIO
 from fpdf import FPDF
 
 app = Flask(__name__)
-app.secret_key = "your-super-secret-key"
+app.secret_key = "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"
 logging.basicConfig(level=logging.INFO)
 
 # Load model and vectorizer
