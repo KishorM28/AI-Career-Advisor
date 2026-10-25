@@ -24,12 +24,18 @@ if not app.secret_key:
         "FLASK_SECRET_KEY is missing. Generate a secret key and add it to your .env file."
     )
 
-# Load the trained resume classification model and vectorizer.
-with open("resume_classifier.pkl", "rb") as model_file:
-    classifier = pickle.load(model_file)
+def load_pickle_model(file_name):
+    """Load a required pickled model file and fail clearly if it is missing."""
+    if not os.path.exists(file_name):
+        raise FileNotFoundError(f"Required model file not found: {file_name}")
 
-with open("vectorizer.pkl", "rb") as vectorizer_file:
-    vectorizer = pickle.load(vectorizer_file)
+    with open(file_name, "rb") as model_file:
+        return pickle.load(model_file)
+
+
+# Load the trained resume classification model and vectorizer.
+classifier = load_pickle_model("resume_classifier.pkl")
+vectorizer = load_pickle_model("vectorizer.pkl")
 
 # Groq API configuration.
 groq_api_key = os.getenv("GROQ_API_KEY")
@@ -332,5 +338,5 @@ def download_pdf():
         return "Could not generate the PDF. Please check the cover letter text.", 500
 
 
-if __name__ == "__main__":
-    app.run(debug=os.getenv("FLASK_DEBUG", "false").lower() == "true")
+if __name__ == '__main__':
+    app.run(debug=True)
